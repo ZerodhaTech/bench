@@ -74,7 +74,7 @@ def add_to_excluded_apps_txt(app, bench_path='.'):
 	if app == 'frappe':
 		raise ValueError('Frappe app cannot be excludeed from update')
 	if app not in os.listdir('apps'):
-		raise ValueError('The app {} does not exist'.format(app)) 
+		raise ValueError('The app {} does not exist'.format(app))
 	apps = get_excluded_apps(bench_path=bench_path)
 	if app not in apps:
 		apps.append(app)
@@ -90,7 +90,7 @@ def remove_from_excluded_apps_txt(app, bench_path='.'):
 		apps.remove(app)
 		return write_excluded_apps_txt(apps, bench_path=bench_path)
 
-def get_app(git_url, branch=None, bench_path='.', build_asset_files=True, verbose=False):
+def get_app(git_url, skip_clone, branch=None, bench_path='.', build_asset_files=True, verbose=False):
 	# from bench.utils import check_url
 	try:
 		from urlparse import urljoin
@@ -115,19 +115,22 @@ def get_app(git_url, branch=None, bench_path='.', build_asset_files=True, verbos
 	shallow_clone = '--depth 1' if check_git_for_shallow_clone() else ''
 	branch = '--branch {branch}'.format(branch=branch) if branch else ''
 
-	exec_cmd("git clone {git_url} {branch} {shallow_clone} --origin upstream".format(
-				git_url=git_url,
-				shallow_clone=shallow_clone,
-				branch=branch),
-			cwd=os.path.join(bench_path, 'apps'))
+	if skip_clone:
+		app_name = skip_clone
+	else:
+		exec_cmd("git clone {git_url} {branch} {shallow_clone} --origin upstream".format(
+					git_url=git_url,
+					shallow_clone=shallow_clone,
+					branch=branch),
+				cwd=os.path.join(bench_path, 'apps'))
 
-	#Retrieves app name from setup.py
-	app_path = os.path.join(bench_path, 'apps', repo_name, 'setup.py')
-	with open(app_path, 'rb') as f:
-		app_name = re.search(r'name\s*=\s*[\'"](.*)[\'"]', f.read().decode('utf-8')).group(1)
-		if repo_name != app_name:
-			apps_path = os.path.join(os.path.abspath(bench_path), 'apps')
-			os.rename(os.path.join(apps_path, repo_name), os.path.join(apps_path, app_name))
+		#Retrieves app name from setup.py
+		app_path = os.path.join(bench_path, 'apps', repo_name, 'setup.py')
+		with open(app_path, 'rb') as f:
+			app_name = re.search(r'name\s*=\s*[\'"](.*)[\'"]', f.read().decode('utf-8')).group(1)
+			if repo_name != app_name:
+				apps_path = os.path.join(os.path.abspath(bench_path), 'apps')
+				os.rename(os.path.join(apps_path, repo_name), os.path.join(apps_path, app_name))
 
 	print('installing', app_name)
 	install_app(app=app_name, bench_path=bench_path, verbose=verbose)
@@ -137,6 +140,11 @@ def get_app(git_url, branch=None, bench_path='.', build_asset_files=True, verbos
 	conf = get_config(bench_path=bench_path)
 	if conf.get('restart_supervisor_on_update'):
 		restart_supervisor_processes(bench_path=bench_path)
+
+def delete_app(dirpath):
+	print(dirpath)
+	if os.path.exists(dirpath) and os.path.isdir(dirpath):
+		shutil.rmtree(dirpath)
 
 def new_app(app, bench_path='.'):
 	# For backwards compatibility

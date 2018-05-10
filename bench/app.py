@@ -90,7 +90,7 @@ def remove_from_excluded_apps_txt(app, bench_path='.'):
 		apps.remove(app)
 		return write_excluded_apps_txt(apps, bench_path=bench_path)
 
-def get_app(git_url, skip_clone, branch=None, bench_path='.', build_asset_files=True, verbose=False):
+def get_app(git_url, delete_existing_app, skip_clone, branch=None, bench_path='.', build_asset_files=True, verbose=False):
 	# from bench.utils import check_url
 	try:
 		from urlparse import urljoin
@@ -115,6 +115,10 @@ def get_app(git_url, skip_clone, branch=None, bench_path='.', build_asset_files=
 	shallow_clone = '--depth 1' if check_git_for_shallow_clone() else ''
 	branch = '--branch {branch}'.format(branch=branch) if branch else ''
 
+	if delete_existing_app:
+		dir_path = os.path.join(bench_path, 'apps', repo_name)
+		delete_app(dir_path)
+
 	if skip_clone:
 		app_name = skip_clone
 	else:
@@ -129,6 +133,9 @@ def get_app(git_url, skip_clone, branch=None, bench_path='.', build_asset_files=
 		with open(app_path, 'rb') as f:
 			app_name = re.search(r'name\s*=\s*[\'"](.*)[\'"]', f.read().decode('utf-8')).group(1)
 			if repo_name != app_name:
+				if delete_existing_app:
+					dir_path = os.path.join(bench_path, 'apps', app_name)
+					delete_app(dir_path)
 				apps_path = os.path.join(os.path.abspath(bench_path), 'apps')
 				os.rename(os.path.join(apps_path, repo_name), os.path.join(apps_path, app_name))
 
